@@ -70,8 +70,9 @@ function wire(fromSel, toSel, inputEl, swapBtn, convertFn) {
 }
 
 // ── Currency ───────────────────────────────────────────────────────────────
-const FRANKFURTER = 'https://api.frankfurter.app';
-const POPULAR     = ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'AUD', 'CAD', 'CHF', 'SGD', 'AED', 'SAR'];
+// jsDelivr CDN — no CORS issues, works on file:// and any host, updated daily
+const FX_BASE  = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1';
+const POPULAR  = ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'AUD', 'CAD', 'CHF', 'SGD', 'AED', 'SAR'];
 const CACHE_KEY   = 'uc_fx_cache';
 
 // Hardcoded fallback so selects are never empty (enables quick pairs in manual mode before API loads)
@@ -243,31 +244,40 @@ async function loadCurrencies() {
     return;
   }
 
-  // Fetch fresh rates
+  // Fetch fresh rates from jsDelivr CDN (no CORS issues)
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const [cRes, rRes] = await Promise.all([
-      fetch(`${FRANKFURTER}/currencies`, { signal: controller.signal }),
-      fetch(`${FRANKFURTER}/latest?from=USD`, { signal: controller.signal }),
+      fetch(`${FX_BASE}/currencies.json`,     { signal: controller.signal }),
+      fetch(`${FX_BASE}/currencies/usd.json`, { signal: controller.signal }),
     ]);
     clearTimeout(timeout);
 
     if (!cRes.ok || !rRes.ok) throw new Error(`API ${cRes.status}`);
 
-    const currencies = await cRes.json();
-    const rData      = await rRes.json();
+    const cData = await cRes.json(); // { "usd": "US Dollar", "inr": "Indian Rupee", ... }
+    const rData = await rRes.json(); // { "date": "...", "usd": { "inr": 83.4, ... } }
 
-    rates    = { ...rData.rates, USD: 1 };
+    // API returns lowercase codes — convert to uppercase for consistency
+    const currencies = {};
+    for (const [code, name] of Object.entries(cData)) {
+      currencies[code.toUpperCase()] = name;
+    }
+
+    rates = { USD: 1 };
+    for (const [code, val] of Object.entries(rData.usd)) {
+      rates[code.toUpperCase()] = val;
+    }
     rateDate = rData.date;
+
     saveCache(rates, rateDate, currencies);
     populateSelects(currencies);
     enableControls();
     convertCurrency();
   } catch (err) {
     if (!cache) {
-      // Nothing to fall back to
       cloading.classList.add('hidden');
       cresult.classList.add('error');
       cresult.textContent = err.name === 'AbortError' ? 'Request timed out' : 'Could not load rates';
