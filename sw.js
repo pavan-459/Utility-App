@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'uc-v2';
+const CACHE = 'uc-v3';
 const STATIC = [
   './',
   './index.html',
@@ -38,7 +38,10 @@ self.addEventListener('fetch', e => {
     e.respondWith(
       fetch(e.request)
         .then(r => {
-          if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+          if (r.ok) {
+            const toCache = r.clone(); // clone synchronously before r is consumed
+            caches.open(CACHE).then(c => c.put(e.request, toCache));
+          }
           return r;
         })
         .catch(() => caches.match(e.request))
@@ -50,7 +53,10 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fresh = fetch(e.request).then(r => {
-        if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+        if (r.ok) {
+          const toCache = r.clone(); // clone synchronously before r is consumed
+          caches.open(CACHE).then(c => c.put(e.request, toCache));
+        }
         return r;
       });
       return cached || fresh;
