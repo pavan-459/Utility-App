@@ -74,6 +74,14 @@ const FRANKFURTER = 'https://api.frankfurter.app';
 const POPULAR     = ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'AUD', 'CAD', 'CHF', 'SGD', 'AED', 'SAR'];
 const CACHE_KEY   = 'uc_fx_cache';
 
+// Hardcoded fallback so selects are never empty (enables quick pairs in manual mode before API loads)
+const MINIMAL_CURRENCIES = {
+  USD: 'US Dollar', EUR: 'Euro', GBP: 'British Pound', JPY: 'Japanese Yen',
+  INR: 'Indian Rupee', AUD: 'Australian Dollar', CAD: 'Canadian Dollar',
+  CHF: 'Swiss Franc', SGD: 'Singapore Dollar', AED: 'UAE Dirham', SAR: 'Saudi Riyal',
+  NZD: 'New Zealand Dollar', HKD: 'Hong Kong Dollar', MYR: 'Malaysian Ringgit',
+};
+
 let rates    = null;
 let rateDate = '';
 let currMode = 'live'; // 'live' | 'manual'
@@ -142,9 +150,15 @@ function setMode(mode) {
 function syncManualLabels() {
   mrFrom.textContent = cfrom.value || 'FROM';
   mrTo.textContent   = cto.value   || 'TO';
-  if (currMode === 'manual' && rates && cfrom.value && cto.value) {
-    const r = (rates[cto.value] ?? 1) / (rates[cfrom.value] ?? 1);
-    manualRate.value = parseFloat(r.toFixed(6));
+  if (currMode === 'manual') {
+    if (rates && cfrom.value && cto.value) {
+      // Pre-fill with live rate
+      const r = (rates[cto.value] ?? 1) / (rates[cfrom.value] ?? 1);
+      manualRate.value = parseFloat(r.toFixed(6));
+    } else {
+      // No live rates — clear so user knows to type their own rate
+      manualRate.value = '';
+    }
   }
 }
 
@@ -204,12 +218,16 @@ function enableControls() {
 async function loadCurrencies() {
   const cache = loadCache();
 
-  // Show cached data immediately (if any) while fetching fresh
+  // Always populate minimal list first — ensures quick pairs and manual mode
+  // work immediately without waiting for the API or cache
+  populateSelects(MINIMAL_CURRENCIES);
+  enableControls();
+
+  // Upgrade to cached data if available
   if (cache) {
     rates    = cache.rates;
     rateDate = cache.date;
     populateSelects(cache.currencies);
-    enableControls();
     convertCurrency();
   }
 
@@ -218,7 +236,6 @@ async function loadCurrencies() {
     if (cache) {
       crateinfo.textContent = `Cached rates from ${rateDate} (you're offline)`;
     } else {
-      cloading.classList.add('hidden');
       cresult.classList.add('error');
       cresult.textContent = 'Offline — no cached rates';
       crateinfo.textContent = 'Switch to Manual mode and enter the rate yourself.';
