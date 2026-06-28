@@ -205,9 +205,11 @@ function populateSelects(currencies) {
     })
     .map(([code, name]) => ({ value: code, label: `${code}  —  ${name}` }));
 
-  fill(cfrom, opts, 'USD');
-  fill(cto,   opts, 'INR');
+  fill(cfrom,       opts, 'USD');
+  fill(cto,         opts, 'INR');
+  fill(numCurrency, opts, numCurrency.value || 'USD');
   syncManualLabels();
+  convertNumbers();
 }
 
 function enableControls() {
@@ -504,3 +506,101 @@ function convertTime() {
 
 timeRef.addEventListener('input', convertTime);
 convertTime();
+
+// ── Crores / Scale Converter ───────────────────────────────────────────────
+const CURR_SYMBOLS = {
+  USD: '$', EUR: '€', GBP: '£', JPY: '¥', INR: '₹',
+  AUD: 'A$', CAD: 'C$', CHF: 'Fr', SGD: 'S$', AED: 'د.إ', SAR: '﷼',
+};
+
+const numAmount   = document.getElementById('num-amount');
+const numScale    = document.getElementById('num-scale');
+const numCurrency = document.getElementById('num-currency');
+const numResults  = document.getElementById('num-results');
+
+// Pre-populate with minimal list (upgraded by populateSelects when rates load)
+fill(numCurrency,
+  Object.entries(MINIMAL_CURRENCIES).map(([c, n]) => ({ value: c, label: `${c}  —  ${n}` })),
+  'USD'
+);
+
+// Indian number formatter (1,00,00,000 style)
+function indFmt(n) {
+  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(n));
+}
+
+// Tag row: crores + lakhs pills
+function scaleTags(n, curr, accent) {
+  const crores = n / 1e7;
+  const lakhs  = n / 1e5;
+  const sym    = CURR_SYMBOLS[curr] ?? curr + ' ';
+  const cls    = accent ? 'num-tag accent' : 'num-tag';
+  return `
+    <span class="${cls}">${fmt(crores)} Crore${crores !== 1 ? 's' : ''} ${curr}</span>
+    <span class="${cls}">${fmt(lakhs)} Lakhs ${curr}</span>`;
+}
+
+function convertNumbers() {
+  const amount = parseFloat(numAmount.value);
+  const scale  = parseFloat(numScale.value);
+  const curr   = numCurrency.value || 'USD';
+  if (isNaN(amount) || !scale) { numResults.innerHTML = ''; return; }
+
+  const raw = amount * scale;                        // e.g. 20 × 1,000,000 = 20,000,000
+  const sym = CURR_SYMBOLS[curr] ?? curr + ' ';
+  const scaleName = numScale.options[numScale.selectedIndex]?.text ?? '';
+
+  // Block 1 — selected currency in Indian scale
+  let html = `
+    <div class="num-block">
+      <div class="num-label">${amount} ${scaleName} in ${curr} — Indian Scale</div>
+      <div class="num-big">${sym} ${indFmt(raw)}</div>
+      <div class="num-tags">${scaleTags(raw, curr, false)}</div>
+    </div>`;
+
+  if (curr === 'INR') {
+    // If already INR, show the USD equivalent as the second block
+    if (rates && rates['USD'] && rates['INR']) {
+      const usdVal = (raw / (rates['INR'] ?? 1)) * (rates['USD'] ?? 1);
+      const scaleLabels = [
+        { d: 1e9, n: 'Billion' }, { d: 1e6, n: 'Million' }, { d: 1e3, n: 'Thousand' },
+      ];
+      const best = scaleLabels.find(s => usdVal >= s.d) ?? scaleLabels[2];
+      html += `
+        <div class="num-divider"></div>
+        <div class="num-block">
+          <div class="num-label">Equivalent in USD</div>
+          <div class="num-big accent">$ ${indFmt(usdVal)}</div>
+          <div class="num-tags">
+            <span class="num-tag accent">${fmt(usdVal / best.d)} ${best.n} USD</span>
+          </div>
+          <div class="num-rate">1 USD = ${fmt((rates['INR'] ?? 1) / (rates['USD'] ?? 1))} INR  ·  as of ${rateDate}</div>
+        </div>`;
+    }
+  } else if (rates && rates[curr] && rates['INR']) {
+    // Convert to INR
+    const inrVal  = (raw / (rates[curr] ?? 1)) * (rates['INR'] ?? 1);
+    const fxRate  = (rates['INR'] ?? 1) / (rates[curr] ?? 1);
+    html += `
+      <div class="num-divider"></div>
+      <div class="num-block">
+        <div class="num-label">Converted to INR</div>
+        <div class="num-big accent">₹ ${indFmt(inrVal)}</div>
+        <div class="num-tags">${scaleTags(inrVal, 'INR', true)}</div>
+        <div class="num-rate">1 ${curr} = ${fmt(fxRate)} INR  ·  as of ${rateDate || 'cached'}</div>
+      </div>`;
+  } else {
+    html += `
+      <div class="num-note">
+        Open the <strong>Currency</strong> tab to load live rates, then come back for the INR equivalent.
+      </div>`;
+  }
+
+  numResults.innerHTML = html;
+}
+
+[numAmount, numScale, numCurrency].forEach(el => {
+  el.addEventListener('input',  convertNumbers);
+  el.addEventListener('change', convertNumbers);
+});
+convertNumbers();

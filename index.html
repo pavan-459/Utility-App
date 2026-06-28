@@ -42,6 +42,10 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Time
       </button>
+      <button class="tab" data-tab="numbers" role="tab" aria-selected="false">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+        Crores
+      </button>
     </nav>
 
     <main class="main">
@@ -189,6 +193,43 @@
             <div class="ref-row"><span>Room temperature</span><span>22°C = 71.6°F</span></div>
             <div class="ref-row"><span>Body temperature</span><span>37°C = 98.6°F</span></div>
             <div class="ref-row"><span>Water boils</span><span>100°C = 212°F = 373.15 K</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Crores / Scale ── -->
+      <section id="numbers" class="converter">
+        <div class="converter-card">
+          <div class="num-row">
+            <div class="field">
+              <label for="num-amount">Amount</label>
+              <input type="number" id="num-amount" value="20" placeholder="e.g. 20">
+            </div>
+            <div class="field">
+              <label for="num-scale">Western Scale</label>
+              <select id="num-scale">
+                <option value="1000">Thousand (K)</option>
+                <option value="1000000" selected>Million (M)</option>
+                <option value="1000000000">Billion (B)</option>
+                <option value="1000000000000">Trillion (T)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="num-currency">Currency</label>
+              <select id="num-currency"></select>
+            </div>
+          </div>
+          <div id="num-results"></div>
+        </div>
+        <div class="ref-card">
+          <p class="ref-title">Indian ↔ Western Scale</p>
+          <div class="ref-rows">
+            <div class="ref-row"><span>1 Lakh</span><span>1,00,000 = 0.1 Million</span></div>
+            <div class="ref-row"><span>10 Lakh</span><span>10,00,000 = 1 Million</span></div>
+            <div class="ref-row"><span>1 Crore</span><span>1,00,00,000 = 10 Million</span></div>
+            <div class="ref-row"><span>10 Crore</span><span>10,00,00,000 = 100 Million</span></div>
+            <div class="ref-row"><span>100 Crore</span><span>1,00,00,00,000 = 1 Billion</span></div>
+            <div class="ref-row"><span>1 Lakh Crore</span><span>1,00,000 Crore = 1 Trillion</span></div>
           </div>
         </div>
       </section>
