@@ -586,19 +586,105 @@ body {
 }
 
 /* ── Mobile ── */
-@media (max-width: 500px) {
-  .converter-card { padding: 18px 16px; }
-  .field-group { flex-direction: column; }
+@media (max-width: 640px) {
+
+  /* ─ Bottom navigation bar ─ */
+  .app {
+    padding: 0 12px calc(76px + env(safe-area-inset-bottom));
+  }
+  .header { padding: 14px 0 10px; }
+
+  .tabs {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-around;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    margin: 0;
+    gap: 2px;
+    overflow: visible;
+    scrollbar-width: none;
+    box-shadow: 0 -2px 16px rgba(0,0,0,.08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  [data-theme="dark"] .tabs { box-shadow: 0 -2px 16px rgba(0,0,0,.4); }
+
+  .tab {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 2px;
+    font-size: .6rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+    gap: 3px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    min-height: 52px;
+    white-space: nowrap;
+  }
+  .tab svg { width: 20px; height: 20px; }
+  .tab:hover { border-color: transparent; background: transparent; color: var(--primary); }
+  .tab.active {
+    border-color: transparent;
+    background: var(--primary-dim);
+    color: var(--primary);
+  }
+
+  /* ─ Cards & layout ─ */
+  .converter-card { padding: 16px 14px; }
+
+  /* ─ Field groups: stack vertically ─ */
+  .field-group { flex-direction: column; gap: 6px; }
   .swap-btn {
-    width: 36px;
-    height: 36px;
     align-self: center;
     rotate: 90deg;
     margin-bottom: 0;
   }
   .field { width: 100%; }
-  .header h1 { font-size: 1.1rem; }
+
+  /* ─ Bigger touch targets (48 px min) ─ */
+  .field select,
+  .field input[type="number"] { padding: 12px 14px; font-size: 1rem; }
+  .field select { padding-right: 36px; }
+  .result { padding: 12px 14px; font-size: 1.2rem; min-height: 48px; }
+
+  /* ─ Header ─ */
+  .header h1 { font-size: 1.05rem; }
+  .icon-btn  { width: 40px; height: 40px; }
+
+  /* ─ Mode bar ─ */
+  .seg-btn { padding: 6px 10px; font-size: .78rem; }
+  .conn-pill { font-size: .7rem; }
+
+  /* ─ Manual rate row ─ */
+  .manual-rate-row { flex-wrap: wrap; gap: 6px; }
+
+  /* ─ Quick pairs ─ */
+  .pair-btn { padding: 8px 13px; font-size: .8rem; }
+
+  /* ─ Ref cards ─ */
+  .ref-card { padding: 16px; }
+  .ref-row  { font-size: .82rem; }
+
+  /* ─ Time zones ─ */
   .world-clock-grid { grid-template-columns: 1fr; }
-  .tz-time { font-size: 1.35rem; }
+  .tz-card  { padding: 14px; }
+  .tz-time  { font-size: 1.4rem; }
+  .time-input-row { flex-direction: column; align-items: flex-start; }
+  .time-input-row input[type="datetime-local"] { width: 100%; }
+  .tr-row   { font-size: .82rem; gap: 8px; }
+
+  /* ─ Crores / Numbers ─ */
   .num-row { grid-template-columns: 1fr; }
+  .num-big { font-size: 1.3rem; }
+  .num-tag { font-size: .76rem; }
 }
