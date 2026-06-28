@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'uc-v4';
+const CACHE = 'uc-v5';
 const STATIC = [
   './',
   './index.html',

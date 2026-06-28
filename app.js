@@ -129,7 +129,11 @@ const manualRow  = document.getElementById('manual-rate-row');
 const manualRate = document.getElementById('manual-rate');
 const mrFrom     = document.getElementById('mr-from');
 const mrTo       = document.getElementById('mr-to');
-const numCurrency = document.getElementById('num-currency'); // declared here so populateSelects can reference it
+// Crores DOM refs declared here — populateSelects calls convertNumbers() which needs them
+const numCurrency = document.getElementById('num-currency');
+const numAmount   = document.getElementById('num-amount');
+const numScale    = document.getElementById('num-scale');
+const numResults  = document.getElementById('num-results');
 
 // Cache helpers
 function saveCache(r, d, c) {
@@ -542,10 +546,6 @@ const CURR_SYMBOLS = {
   USD: '$', EUR: '€', GBP: '£', JPY: '¥', INR: '₹',
   AUD: 'A$', CAD: 'C$', CHF: 'Fr', SGD: 'S$', AED: 'د.إ', SAR: '﷼',
 };
-
-const numAmount   = document.getElementById('num-amount');
-const numScale    = document.getElementById('num-scale');
-const numResults  = document.getElementById('num-results');
 
 // Pre-populate with minimal list (upgraded by populateSelects when rates load)
 fill(numCurrency,
