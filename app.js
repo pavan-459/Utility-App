@@ -34,6 +34,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     tab.setAttribute('aria-selected', 'true');
     document.getElementById(tab.dataset.tab).classList.add('active');
+    history.replaceState(null, '', '#' + tab.dataset.tab);
+    saveState({ last_tab: tab.dataset.tab });
+    tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   });
 });
 
@@ -65,6 +68,31 @@ function wire(fromSel, toSel, inputEl, swapBtn, convertFn) {
   inputEl.addEventListener('input', convertFn);
   swapBtn.addEventListener('click', () => {
     [fromSel.value, toSel.value] = [toSel.value, fromSel.value];
+    convertFn();
+  });
+}
+
+// ── State persistence ──────────────────────────────────────────────────────
+const STATE_KEY = 'uc_st';
+function saveState(updates) {
+  try {
+    const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+    Object.assign(s, updates);
+    localStorage.setItem(STATE_KEY, JSON.stringify(s));
+  } catch {}
+}
+function getState(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}')[key] ?? fallback; }
+  catch { return fallback; }
+}
+
+function wirePersist(fromSel, toSel, inputEl, swapBtn, convertFn, key) {
+  fromSel.addEventListener('change', () => { saveState({ [key+'_from']: fromSel.value }); convertFn(); });
+  toSel.addEventListener('change',   () => { saveState({ [key+'_to']:   toSel.value   }); convertFn(); });
+  inputEl.addEventListener('input',  convertFn);
+  swapBtn.addEventListener('click',  () => {
+    [fromSel.value, toSel.value] = [toSel.value, fromSel.value];
+    saveState({ [key+'_from']: fromSel.value, [key+'_to']: toSel.value });
     convertFn();
   });
 }
@@ -205,8 +233,8 @@ function populateSelects(currencies) {
     })
     .map(([code, name]) => ({ value: code, label: `${code}  —  ${name}` }));
 
-  fill(cfrom,       opts, 'USD');
-  fill(cto,         opts, 'INR');
+  fill(cfrom,       opts, getState('fx_from', 'USD'));
+  fill(cto,         opts, getState('fx_to',   'INR'));
   fill(numCurrency, opts, numCurrency.value || 'USD');
   syncManualLabels();
   convertNumbers();
@@ -290,12 +318,13 @@ async function loadCurrencies() {
 }
 
 // Wire currency events
-cfrom.addEventListener('change', () => { syncManualLabels(); convertCurrency(); });
-cto.addEventListener('change',   () => { syncManualLabels(); convertCurrency(); });
+cfrom.addEventListener('change', () => { saveState({ fx_from: cfrom.value }); syncManualLabels(); convertCurrency(); });
+cto.addEventListener('change',   () => { saveState({ fx_to:   cto.value   }); syncManualLabels(); convertCurrency(); });
 cinput.addEventListener('input', convertCurrency);
 manualRate.addEventListener('input', convertCurrency);
 cswap.addEventListener('click', () => {
   [cfrom.value, cto.value] = [cto.value, cfrom.value];
+  saveState({ fx_from: cfrom.value, fx_to: cto.value });
   syncManualLabels();
   convertCurrency();
 });
@@ -332,8 +361,8 @@ const linput = document.getElementById('length-input');
 const lresult= document.getElementById('length-result');
 const lswap  = document.getElementById('length-swap');
 
-fill(lfrom, LENGTH, 'cm');
-fill(lto,   LENGTH, 'in');
+fill(lfrom, LENGTH, getState('len_from', 'cm'));
+fill(lto,   LENGTH, getState('len_to',   'in'));
 
 function convertLength() {
   const f = LENGTH.find(u => u.value === lfrom.value);
@@ -343,7 +372,7 @@ function convertLength() {
   lresult.textContent = fmt(v * f.factor / t.factor) + ' ' + t.value;
 }
 
-wire(lfrom, lto, linput, lswap, convertLength);
+wirePersist(lfrom, lto, linput, lswap, convertLength, 'len');
 convertLength();
 
 // ── Weight ─────────────────────────────────────────────────────────────────
@@ -364,8 +393,8 @@ const winput = document.getElementById('weight-input');
 const wresult= document.getElementById('weight-result');
 const wswap  = document.getElementById('weight-swap');
 
-fill(wfrom, WEIGHT, 'kg');
-fill(wto,   WEIGHT, 'lb');
+fill(wfrom, WEIGHT, getState('wt_from', 'kg'));
+fill(wto,   WEIGHT, getState('wt_to',   'lb'));
 
 function convertWeight() {
   const f = WEIGHT.find(u => u.value === wfrom.value);
@@ -375,7 +404,7 @@ function convertWeight() {
   wresult.textContent = fmt(v * f.factor / t.factor) + ' ' + t.value;
 }
 
-wire(wfrom, wto, winput, wswap, convertWeight);
+wirePersist(wfrom, wto, winput, wswap, convertWeight, 'wt');
 convertWeight();
 
 // ── Temperature ────────────────────────────────────────────────────────────
@@ -391,8 +420,8 @@ const tinput = document.getElementById('temperature-input');
 const tresult= document.getElementById('temperature-result');
 const tswap  = document.getElementById('temperature-swap');
 
-fill(tfrom, TEMP, 'c');
-fill(tto,   TEMP, 'f');
+fill(tfrom, TEMP, getState('tmp_from', 'c'));
+fill(tto,   TEMP, getState('tmp_to',   'f'));
 
 const TEMP_SYMBOL = { c: '°C', f: '°F', k: ' K' };
 
@@ -414,7 +443,7 @@ function convertTemp() {
   tresult.textContent = fmt(result) + TEMP_SYMBOL[tto.value];
 }
 
-wire(tfrom, tto, tinput, tswap, convertTemp);
+wirePersist(tfrom, tto, tinput, tswap, convertTemp, 'tmp');
 convertTemp();
 
 // ── Time Zones ─────────────────────────────────────────────────────────────
@@ -604,3 +633,125 @@ function convertNumbers() {
   el.addEventListener('change', convertNumbers);
 });
 convertNumbers();
+
+// ── Area ───────────────────────────────────────────────────────────────────
+const AREA = [
+  { value: 'mm2',  label: 'mm² (sq mm)',   factor: 1e-6        },
+  { value: 'cm2',  label: 'cm² (sq cm)',   factor: 1e-4        },
+  { value: 'm2',   label: 'm² (sq m)',     factor: 1           },
+  { value: 'km2',  label: 'km² (sq km)',   factor: 1e6         },
+  { value: 'ha',   label: 'Hectare (ha)',  factor: 1e4         },
+  { value: 'acre', label: 'Acre',          factor: 4046.856    },
+  { value: 'ft2',  label: 'ft² (sq ft)',   factor: 0.092903    },
+  { value: 'yd2',  label: 'yd² (sq yd)',   factor: 0.836127    },
+  { value: 'mi2',  label: 'mi² (sq mi)',   factor: 2589988.11  },
+];
+
+const afrom  = document.getElementById('area-from');
+const ato    = document.getElementById('area-to');
+const ainput = document.getElementById('area-input');
+const aresult= document.getElementById('area-result');
+const aswap  = document.getElementById('area-swap');
+
+fill(afrom, AREA, getState('area_from', 'm2'));
+fill(ato,   AREA, getState('area_to',   'ft2'));
+
+function convertArea() {
+  const f = AREA.find(u => u.value === afrom.value);
+  const t = AREA.find(u => u.value === ato.value);
+  const v = parseFloat(ainput.value);
+  if (!f || !t || isNaN(v)) { aresult.textContent = '—'; return; }
+  aresult.textContent = fmt(v * f.factor / t.factor) + ' ' + t.value;
+}
+
+wirePersist(afrom, ato, ainput, aswap, convertArea, 'area');
+convertArea();
+
+// ── Speed ──────────────────────────────────────────────────────────────────
+const SPEED = [
+  { value: 'ms',   label: 'm/s',          factor: 1        },
+  { value: 'kmh',  label: 'km/h',         factor: 1/3.6    },
+  { value: 'mph',  label: 'mph',          factor: 0.44704  },
+  { value: 'knot', label: 'Knot (kn)',    factor: 0.514444 },
+  { value: 'fts',  label: 'ft/s',         factor: 0.3048   },
+  { value: 'mach', label: 'Mach (≈ SL)',  factor: 343      },
+];
+
+const spfrom  = document.getElementById('speed-from');
+const spto    = document.getElementById('speed-to');
+const spinput = document.getElementById('speed-input');
+const spresult= document.getElementById('speed-result');
+const spswap  = document.getElementById('speed-swap');
+
+fill(spfrom, SPEED, getState('spd_from', 'kmh'));
+fill(spto,   SPEED, getState('spd_to',   'mph'));
+
+function convertSpeed() {
+  const f = SPEED.find(u => u.value === spfrom.value);
+  const t = SPEED.find(u => u.value === spto.value);
+  const v = parseFloat(spinput.value);
+  if (!f || !t || isNaN(v)) { spresult.textContent = '—'; return; }
+  spresult.textContent = fmt(v * f.factor / t.factor) + ' ' + t.value;
+}
+
+wirePersist(spfrom, spto, spinput, spswap, convertSpeed, 'spd');
+convertSpeed();
+
+// ── Data ───────────────────────────────────────────────────────────────────
+const DATA = [
+  { value: 'bit', label: 'Bit (b)',        factor: 0.125             },
+  { value: 'b',   label: 'Byte (B)',       factor: 1                 },
+  { value: 'kb',  label: 'Kilobyte (KB)',  factor: 1024              },
+  { value: 'mb',  label: 'Megabyte (MB)',  factor: 1048576           },
+  { value: 'gb',  label: 'Gigabyte (GB)',  factor: 1073741824        },
+  { value: 'tb',  label: 'Terabyte (TB)',  factor: 1099511627776     },
+  { value: 'pb',  label: 'Petabyte (PB)', factor: 1.12589990684e15  },
+];
+
+const dbfrom  = document.getElementById('data-from');
+const dbto    = document.getElementById('data-to');
+const dbinput = document.getElementById('data-input');
+const dbresult= document.getElementById('data-result');
+const dbswap  = document.getElementById('data-swap');
+
+fill(dbfrom, DATA, getState('dat_from', 'gb'));
+fill(dbto,   DATA, getState('dat_to',   'mb'));
+
+function convertData() {
+  const f = DATA.find(u => u.value === dbfrom.value);
+  const t = DATA.find(u => u.value === dbto.value);
+  const v = parseFloat(dbinput.value);
+  if (!f || !t || isNaN(v)) { dbresult.textContent = '—'; return; }
+  dbresult.textContent = fmt(v * f.factor / t.factor) + ' ' + t.value;
+}
+
+wirePersist(dbfrom, dbto, dbinput, dbswap, convertData, 'dat');
+convertData();
+
+// ── Copy to clipboard ──────────────────────────────────────────────────────
+const COPY_SVG  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+const CHECK_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const el = document.getElementById(btn.dataset.for);
+    if (!el) return;
+    const text = el.textContent.trim();
+    if (!text || text === '—') return;
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.classList.add('ok');
+      btn.innerHTML = CHECK_SVG;
+      setTimeout(() => { btn.classList.remove('ok'); btn.innerHTML = COPY_SVG; }, 1500);
+    } catch {}
+  });
+});
+
+// ── Hash routing / restore last tab ───────────────────────────────────────
+(function () {
+  const hash = window.location.hash.slice(1) || getState('last_tab', '');
+  if (hash) {
+    const t = document.querySelector(`.tab[data-tab="${hash}"]`);
+    if (t) t.click();
+  }
+}());

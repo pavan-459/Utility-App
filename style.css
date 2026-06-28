@@ -222,6 +222,7 @@ body {
 .field input[type="number"] { -moz-appearance: textfield; }
 
 /* ── Result box ── */
+.result-wrap { position: relative; }
 .result {
   padding: 10px 12px;
   border: 1.5px solid var(--border);
@@ -236,6 +237,31 @@ body {
   user-select: all;
 }
 .result.error { color: #ef4444; font-weight: 400; font-size: .875rem; }
+
+/* ── Copy button ── */
+.copy-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity .15s, color .15s, background .15s;
+  padding: 0;
+  line-height: 1;
+}
+.result-wrap:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { background: var(--primary-dim); color: var(--primary); }
+.copy-btn.ok { color: #22c55e; opacity: 1; }
+@media (hover: none) { .copy-btn { opacity: 0.55; } }
 
 /* ── Swap button ── */
 .swap-btn {
@@ -599,28 +625,33 @@ body {
     bottom: 0; left: 0; right: 0;
     z-index: 100;
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
     background: var(--surface);
     border-top: 1px solid var(--border);
     border-radius: 0;
     padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
     margin: 0;
     gap: 2px;
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: visible;
     scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
     box-shadow: 0 -2px 16px rgba(0,0,0,.08);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
   }
+  .tabs::-webkit-scrollbar { display: none; }
   [data-theme="dark"] .tabs { box-shadow: 0 -2px 16px rgba(0,0,0,.4); }
 
   .tab {
-    flex: 1;
+    flex: 0 0 auto;
+    min-width: 58px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 6px 2px;
-    font-size: .6rem;
+    padding: 6px 4px;
+    font-size: .58rem;
     font-weight: 600;
     letter-spacing: .01em;
     gap: 3px;
