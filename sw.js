@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'uc-v3';
+const CACHE = 'uc-v4';
 const STATIC = [
   './',
   './index.html',
@@ -32,6 +32,9 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Skip non-HTTP requests (chrome-extension://, data:, etc.)
+  if (!url.protocol.startsWith('http')) return;
 
   // Currency API (jsDelivr CDN): network-first, fall back to cache
   if (url.hostname === 'cdn.jsdelivr.net') {
